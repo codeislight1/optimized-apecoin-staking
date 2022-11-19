@@ -1,0 +1,10 @@
+gasReporterOutput.txt
+.env
+.env.local
+node_modules/
+build/
+.DS_Store
+cache/
+artifacts/
+.idea
+gen
