@@ -3,8 +3,8 @@ let optimizedContractName = "OptimizedApeCoinStaking";
 let unoptimizedContractName = "ApeCoinStaking";
 // run the script after generating gasReporterOutput.txt
 async function main() {
-	let GWEI = 20 * 1e9;
-	let ETH_PRICE = 1260;
+	let GWEI = 71.2 * 1e9; // average gas price in 3 years up to Dec 1st 2022, credit : etherscan
+	let ETH_PRICE = 1658; // average ether price in 3 years up to Dec 1st 2022, credit : etherscan
 	let optimized: Map<string, number> = new Map();
 	let unoptimized: Map<string, number> = new Map();
 	fs.readFile(
@@ -49,9 +49,9 @@ async function main() {
 			const roundNumber = (value: number, decimalPoint: number) =>
 				Math.round(value * 10 ** decimalPoint) / 10 ** decimalPoint;
 			type State = {
-				unoptimized: number;
+				"unoptimized (gas)": number;
 				"unoptimized cost $": number;
-				optimized: number;
+				"optimized (gas)": number;
 				"optimized cost $": number;
 				"reduction %": number;
 				"saved $": number;
@@ -70,12 +70,12 @@ async function main() {
 				let unoptimizedGas = value;
 				if (cancelledOut.includes(key)) continue;
 				obj[key] = {
-					unoptimized: unoptimizedGas,
+					"unoptimized (gas)": unoptimizedGas,
 					"unoptimized cost $": roundNumber(
 						(unoptimizedGas * GWEI * ETH_PRICE) / 1e18,
 						3
 					),
-					optimized: optimizedGas,
+					"optimized (gas)": optimizedGas,
 					"optimized cost $": roundNumber(
 						(optimizedGas * GWEI * ETH_PRICE) / 1e18,
 						3

@@ -329,11 +329,13 @@ export function test(contractName: string, title: string, vars: Variables) {
 								mainTokenId: nftNumbers + i,
 								bakcTokenId: i,
 								amount: toWei(tokenAmountWithNft),
+								isUncommit: true,
 							});
 							maycArr.push({
 								mainTokenId: nftNumbers + i,
 								bakcTokenId: nftPairNumbers + i,
 								amount: toWei(tokenAmountWithNft),
+								isUncommit: true,
 							});
 							i++;
 						}
