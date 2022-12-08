@@ -1,52 +1,28 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { BigNumber, Contract } from "ethers";
+import { Contract } from "ethers";
 import { ethers, network } from "hardhat";
-import { describe } from "mocha";
 
 function secondsTilNextHour(now: Date): number {
 	return 3600 - now.getSeconds() - now.getMinutes() * 60;
 }
 async function speedUp(time: number) {
-	await network.provider.send("evm_increaseTime", [3600]);
+	await network.provider.send("evm_increaseTime", [time]);
 	await network.provider.send("evm_mine");
 }
 export type Variables = {
 	amountNFTsToMint: number;
-	amountApecoinsToStake: number;
-	amountApecoinToDepositWithNFTs: number;
-	numberOfNFTsToSingleDeposit: number;
-	numberOfNFTsToPairDeposit: number;
 	numbersOfIterations: number;
 	timeInBetween: number;
 };
-
-export const toWei = (amount: number) =>
-	ethers.utils.parseEther(amount.toString());
 enum NFT {
 	BAYC,
 	MAYC,
 	BAKC,
 }
-let tokenIdTracker = {
-	bayc: 0,
-	mayc: 0,
-	bakc: 0,
-};
-function tokenIdDeposit(nftDeposit: NFT) {
-	let value;
-	if (nftDeposit === NFT.BAYC) {
-		value = tokenIdTracker.bayc;
-		tokenIdTracker.bayc += 1;
-	} else if (nftDeposit === NFT.MAYC) {
-		value = tokenIdTracker.mayc;
-		tokenIdTracker.mayc += 1;
-	} else {
-		value = tokenIdTracker.bakc;
-		tokenIdTracker.bakc += 1;
-	}
-	return value;
-}
+export const toWei = (amount: number) =>
+	ethers.utils.parseEther(amount.toString());
+
 export function test(contractName: string, title: string, vars: Variables) {
 	describe(title + " testing", () => {
 		let owner: SignerWithAddress,
@@ -69,20 +45,39 @@ export function test(contractName: string, title: string, vars: Variables) {
 			BAKC_QUARTERS_AMOUNTS: number[];
 		let APE_QUARTERS_AMOUNTS: number[];
 		// first index value is 1 to test deposit
-		const CAP_PERPOSITION = [toWei(1), toWei(10094), toWei(2042), toWei(856)];
 		let TOTAL_QUARTERS_AMOUNTS: number[][];
-		const tokenAmount = vars.amountApecoinsToStake;
-		const tokenAmountWithNft = vars.amountApecoinToDepositWithNFTs;
-		const nftNumbers = vars.numberOfNFTsToSingleDeposit;
-		const nftPairNumbers = vars.numberOfNFTsToPairDeposit;
+		const CAP_PERPOSITION = [toWei(1), toWei(10094), toWei(2042), toWei(856)];
+		const tokenAmount = 1;
+		const tokenAmountWithNft = 1;
+		const nftNumbers = 1;
+		const nftPairNumbers = 1;
+		const NINETY_ONE_DAYS_IN_SECONDS = 24 * 3600 * 91;
+		const NINETY_TWO_DAYS_IN_SECONDS = 24 * 3600 * 92;
+		let tokenIdTracker = {
+			bayc: 0,
+			mayc: 0,
+			bakc: 0,
+		};
+		function tokenIdDeposit(nftDeposit: NFT) {
+			let value;
+			if (nftDeposit === NFT.BAYC) {
+				value = tokenIdTracker.bayc;
+				tokenIdTracker.bayc += 1;
+			} else if (nftDeposit === NFT.MAYC) {
+				value = tokenIdTracker.mayc;
+				tokenIdTracker.mayc += 1;
+			} else {
+				value = tokenIdTracker.bakc;
+				tokenIdTracker.bakc += 1;
+			}
+			return value;
+		}
 		before(async () => {
 			tokenIdTracker = {
 				bayc: 0,
 				mayc: 0,
 				bakc: 0,
 			};
-			const NINETY_ONE_DAYS_IN_SECONDS = 24 * 3600 * 91;
-			const NINETY_TWO_DAYS_IN_SECONDS = 24 * 3600 * 92;
 			const currentEthTimestamp = (await ethers.provider.getBlock("latest"))
 				.timestamp;
 			let now = new Date(currentEthTimestamp * 1000);
@@ -122,6 +117,7 @@ export function test(contractName: string, title: string, vars: Variables) {
 			bakc = await ERC721.deploy("BAKC", "BAKC", "", 10000);
 			await bakc.deployed();
 			await ape.mintOwner(owner.address, toWei(200000000));
+			await ape.mintOwner(addr1.address, toWei(11000));
 		});
 		describe("Unit Testing", () => {
 			// iteration calls
@@ -140,10 +136,12 @@ export function test(contractName: string, title: string, vars: Variables) {
 						.then((res: string) => res.length)
 				).to.be.greaterThan(0);
 			});
-			it("should prefund contract, users and setup range", async () => {
+			it("should prefund contract", async () => {
 				let amount = toWei(175_000_000);
 				await ape.transfer(stakingContract.address, amount);
 				expect(await ape.balanceOf(stakingContract.address)).to.be.eq(amount);
+			});
+			it("mints NFTs", async () => {
 				// minting NFTs
 				let toBeMinted = vars.amountNFTsToMint;
 				while (toBeMinted > 0) {
@@ -153,16 +151,12 @@ export function test(contractName: string, title: string, vars: Variables) {
 					await bakc.mint(amount);
 					toBeMinted -= amount;
 				}
-				// adding all ranges
-				await stakingContract.addTimeRange(
-					0,
-					toWei(APE_QUARTERS_AMOUNTS[0]),
-					QUARTERS[0],
-					QUARTERS[1],
-					CAP_PERPOSITION[0]
-				);
-				await stakingContract.removeLastTimeRange(0);
-
+				// tokenId is the amountNFTsToMint
+				await bayc.connect(addr1).mint(1);
+				await mayc.connect(addr1).mint(1);
+				await bakc.connect(addr1).mint(1);
+			});
+			it("setup time ranges", async () => {
 				TOTAL_QUARTERS_AMOUNTS.forEach((values, outerIndex) => {
 					values.forEach(async (value, innerIndex) => {
 						await stakingContract.addTimeRange(
@@ -175,155 +169,218 @@ export function test(contractName: string, title: string, vars: Variables) {
 					});
 				});
 			});
-			//selfdeposit apecoin
-			function operations() {
-				for (let i = 0; i < vars.numbersOfIterations; i++) {
-					it("self deposit apecoin", async () => {
-						tokenIdTracker = {
-							bayc: 0,
-							mayc: 0,
-							bakc: 0,
+			it("$APE approval", async () => {
+				await ape.approve(stakingContract.address, ethers.constants.MaxUint256);
+				await ape
+					.connect(addr1)
+					.approve(stakingContract.address, ethers.constants.MaxUint256);
+			});
+			// fucntion used to check users's balance change
+			async function checkBalance(
+				Fun: Function,
+				checkIncrease: boolean,
+				address: string = owner.address
+			) {
+				let _beforeBal = await ape.balanceOf(address);
+				await Fun();
+				let _afterBal = await ape.balanceOf(address);
+				// check increase of user balance
+				checkIncrease
+					? expect(_afterBal).gt(_beforeBal)
+					: expect(_beforeBal).gt(_afterBal);
+			}
+			function depositTests(isOwner: boolean) {
+				//deposit apecoin
+				it("self deposit apecoin", async () => {
+					const signer = isOwner ? owner : addr1;
+					tokenIdTracker = {
+						bayc: 0,
+						mayc: 0,
+						bakc: 0,
+					};
+					await checkBalance(
+						async () => {
+							await stakingContract
+								.connect(signer)
+								.depositSelfApeCoin(toWei(tokenAmount));
+						},
+						false,
+						signer.address
+					);
+				});
+				//deposit BAYC
+				it("deposit BAYC", async () => {
+					const signer = isOwner ? owner : addr1;
+					let nfts: Array<Object> = [];
+					for (let i = 0; i < nftNumbers; i++) {
+						let nft = {
+							tokenId: isOwner
+								? tokenIdDeposit(NFT.BAYC)
+								: vars.amountNFTsToMint,
+							amount: toWei(tokenAmountWithNft),
 						};
-						await ape.approve(
-							stakingContract.address,
-							ethers.constants.MaxUint256
-						);
-						await stakingContract.depositSelfApeCoin(toWei(tokenAmount));
-					});
-					//deposit BAYC
-					it("deposit BAYC", async () => {
-						let nfts = [];
-						let tokenId;
-						for (let i = 0; i < nftNumbers; i++) {
-							tokenId = tokenIdDeposit(NFT.BAYC);
-							let nft = {
-								tokenId: tokenId,
-								amount: toWei(tokenAmountWithNft),
-							};
-							nfts.push(nft);
-						}
-						await stakingContract.depositBAYC(nfts);
-					});
-					//deposit MAYC
-					it("deposit MAYC", async () => {
-						let nfts = [];
-						let tokenId;
-						for (let i = 0; i < nftNumbers; i++) {
-							tokenId = tokenIdDeposit(NFT.MAYC);
-							let nft = {
-								tokenId: tokenId,
-								amount: toWei(tokenAmountWithNft),
-							};
-							nfts.push(nft);
-						}
-						await stakingContract.depositMAYC(nfts);
-					});
-					//deposit BAKC
-					it("deposit BAKC", async () => {
-						let BaycNfts = [];
-						let MaycNfts = [];
-						let tokenIdMain;
-						let tokenIdBakc;
-						let nft;
-						for (let i = 0; i < nftPairNumbers; i++) {
-							tokenIdMain = tokenIdDeposit(NFT.BAYC);
-							tokenIdBakc = tokenIdDeposit(NFT.BAKC);
-							nft = {
-								mainTokenId: tokenIdMain,
-								bakcTokenId: tokenIdBakc,
-								amount: toWei(tokenAmountWithNft),
-							};
-							BaycNfts.push(nft);
-						}
-						for (let i = 0; i < nftPairNumbers; i++) {
-							tokenIdMain = tokenIdDeposit(NFT.MAYC);
-							tokenIdBakc = tokenIdDeposit(NFT.BAKC);
-							nft = {
-								mainTokenId: tokenIdMain,
-								bakcTokenId: tokenIdBakc,
-								amount: toWei(tokenAmountWithNft),
-							};
-							MaycNfts.push(nft);
-						}
-						await stakingContract.depositBAKC(BaycNfts, MaycNfts);
-					});
-					it("speeds up time for 1 hour", async () => {
+						nfts.push(nft);
+					}
+					await checkBalance(
+						async () => {
+							await stakingContract.connect(signer).depositBAYC(nfts);
+						},
+						false,
+						signer.address
+					);
+				});
+				//deposit MAYC
+				it("deposit MAYC", async () => {
+					const signer = isOwner ? owner : addr1;
+					let nfts: Array<Object> = [];
+					for (let i = 0; i < nftNumbers; i++) {
+						let nft = {
+							tokenId: isOwner
+								? tokenIdDeposit(NFT.MAYC)
+								: vars.amountNFTsToMint,
+							amount: toWei(tokenAmountWithNft),
+						};
+						nfts.push(nft);
+					}
+					await checkBalance(
+						async () => {
+							await stakingContract.connect(signer).depositMAYC(nfts);
+						},
+						false,
+						signer.address
+					);
+				});
+				//deposit BAKC
+				it("deposit BAKC", async () => {
+					const signer = isOwner ? owner : addr1;
+					let BaycNfts: Array<Object> = [];
+					// let MaycNfts = [];
+					let nft;
+					for (let i = 0; i < nftPairNumbers; i++) {
+						nft = {
+							mainTokenId: isOwner
+								? tokenIdDeposit(NFT.BAYC)
+								: vars.amountNFTsToMint,
+							bakcTokenId: isOwner
+								? tokenIdDeposit(NFT.BAKC)
+								: vars.amountNFTsToMint,
+							amount: toWei(tokenAmountWithNft),
+						};
+						BaycNfts.push(nft);
+					}
+					await checkBalance(
+						async () => {
+							await stakingContract.connect(signer).depositBAKC(BaycNfts, []);
+						},
+						false,
+						signer.address
+					);
+				});
+			}
+
+			function operations() {
+				// initial speed up to be within staking Q1 period
+				it("speeds up time", async () => {
+					await speedUp(vars.timeInBetween);
+				});
+				// Deposit tests by addr1 to have warm pool storage slots on each iteration's start
+				depositTests(false);
+				for (let i = 0; i < vars.numbersOfIterations; i++) {
+					// Deposit tests by owner
+					depositTests(true);
+					it("speeds up time", async () => {
+						console.log("i = ", i);
 						await speedUp(vars.timeInBetween);
 					});
+					// Claim tests by owner
 					//claim ApeCoin
 					it("claims apecoin", async () => {
-						await stakingContract.claimSelfApeCoin();
+						await checkBalance(async () => {
+							await stakingContract.claimSelfApeCoin();
+						}, true);
 					});
 					//claim BAYC
 					it("claims BAYC", async () => {
 						let i = 0,
-							arr = [];
+							arr: Array<number> = [];
 						while (i < nftNumbers) {
 							arr.push(i);
 							i++;
 						}
-						await stakingContract.claimSelfBAYC(arr);
+						await checkBalance(async () => {
+							await stakingContract.claimSelfBAYC(arr);
+						}, true);
 					});
 					//claim MAYC
 					it("claims MAYC", async () => {
 						let i = 0,
-							arr = [];
+							arr: Array<number> = [];
 						while (i < nftNumbers) {
 							arr.push(i);
 							i++;
 						}
-						await stakingContract.claimSelfMAYC(arr);
+						await checkBalance(async () => {
+							await stakingContract.claimSelfMAYC(arr);
+						}, true);
 					});
 					//claim BAKC
 					it("claims BAKC", async () => {
 						let i = 0,
-							baycArr = [],
-							maycArr = [];
+							baycArr: Array<Object> = [];
+						// maycArr = [];
 						while (i < nftPairNumbers) {
 							baycArr.push({ mainTokenId: nftNumbers + i, bakcTokenId: i });
-							maycArr.push({
-								mainTokenId: nftNumbers + i,
-								bakcTokenId: nftPairNumbers + i,
-							});
 							i++;
 						}
-						await stakingContract.claimSelfBAKC(baycArr, maycArr);
+						await checkBalance(async () => {
+							await stakingContract.claimSelfBAKC(baycArr, []);
+						}, true);
 					});
+					it("speeds up time", async () => {
+						await speedUp(vars.timeInBetween);
+					});
+					// Withdraw tests by owner
 					//withdraw ApeCoin
 					it("withdraws apecoin", async () => {
-						await stakingContract.withdrawSelfApeCoin(toWei(tokenAmount));
+						await checkBalance(async () => {
+							await stakingContract.withdrawSelfApeCoin(toWei(tokenAmount));
+						}, true);
 					});
 					//withdraw BAYC
 					it("withdraws BAYC", async () => {
 						let i = 0,
-							arr = [];
+							arr: Array<Object> = [];
 						while (i < nftNumbers) {
 							arr.push({
 								tokenId: i,
-								amount: toWei(vars.amountApecoinToDepositWithNFTs),
+								amount: toWei(tokenAmountWithNft),
 							});
 							i++;
 						}
-						await stakingContract.withdrawSelfBAYC(arr);
+						await checkBalance(async () => {
+							await stakingContract.withdrawSelfBAYC(arr);
+						}, true);
 					});
 					//withdraw MAYC
 					it("withdraws MAYC", async () => {
 						let i = 0,
-							arr = [];
+							arr: Array<Object> = [];
 						while (i < nftNumbers) {
 							arr.push({
 								tokenId: i,
-								amount: toWei(vars.amountApecoinToDepositWithNFTs),
+								amount: toWei(tokenAmountWithNft),
 							});
 							i++;
 						}
-						await stakingContract.withdrawSelfMAYC(arr);
+						await checkBalance(async () => {
+							await stakingContract.withdrawSelfMAYC(arr);
+						}, true);
 					});
 					//withdraw BAKC
 					it("withdraws BAKC", async () => {
 						let i = 0,
-							baycArr = [],
-							maycArr = [];
+							baycArr: Array<Object> = [];
+						// maycArr = [];
 						while (i < nftPairNumbers) {
 							baycArr.push({
 								mainTokenId: nftNumbers + i,
@@ -331,15 +388,11 @@ export function test(contractName: string, title: string, vars: Variables) {
 								amount: toWei(tokenAmountWithNft),
 								isUncommit: true,
 							});
-							maycArr.push({
-								mainTokenId: nftNumbers + i,
-								bakcTokenId: nftPairNumbers + i,
-								amount: toWei(tokenAmountWithNft),
-								isUncommit: true,
-							});
 							i++;
 						}
-						await stakingContract.withdrawBAKC(baycArr, maycArr);
+						await checkBalance(async () => {
+							await stakingContract.withdrawBAKC(baycArr, []);
+						}, true);
 					});
 				}
 			}

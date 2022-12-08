@@ -8,25 +8,13 @@ Install `Node.js v16.2.0`.
 Run `npm install` to install dependencies.
 
 ## Demonstration
-2 test cases have been conducted to elaborate on gas costs optimization difference.
+a set of test cases have been conducted on all functions in question, showcasing gas costs optimization difference between original staking contract and optimized version.
 
-**first optimization test case:**
-it used `numberOfNFTsToSingleDeposit: 1` and `numberOfNFTsToPairDeposit: 1` setup
-and for `numbersOfIterations` is 1,
+**optimization test case:**
 
-![alt text](https://github.com/codeislight1/optimized-apecoin-staking/blob/master/tables/summary1.png)
+where `numbersOfIterations` is 1000, to average out the gas costs.
 
-**second optimization test case:**
-it used `numberOfNFTsToSingleDeposit: 2` and `numberOfNFTsToPairDeposit: 2` setup
-and for `numbersOfIterations` is 1,
-
-![alt text](https://github.com/codeislight1/optimized-apecoin-staking/blob/master/tables/summary2.png)
-
-**second optimization test case:**
-it used `numberOfNFTsToSingleDeposit: 5` and `numberOfNFTsToPairDeposit: 5` setup
-and for `numbersOfIterations` is 1,
-
-![alt text](https://github.com/codeislight1/optimized-apecoin-staking/blob/master/tables/summary5.png)
+![alt text](https://github.com/codeislight1/optimized-apecoin-staking/blob/master/tables/summary1000.png)
 
 ## Setup
 using local development is sufficient
@@ -40,4 +28,3 @@ you may edit the testing variables, or leave them in the default state
 then run `npm run test`
 
 it would display at the end gas profiling table
-
