@@ -12,7 +12,11 @@ a set of test cases have been conducted on all functions in question, showcasing
 
 **optimization test case:**
 
-where `numbersOfIterations` is 1000, to average out the gas costs.
+where `numbersOfIterations` is 10, to average out the gas costs.
+
+![alt text](https://github.com/codeislight1/optimized-apecoin-staking/blob/master/tables/summary10.png)
+
+where `numbersOfIterations` is 1000, to more average out the gas costs.
 
 ![alt text](https://github.com/codeislight1/optimized-apecoin-staking/blob/master/tables/summary1000.png)
 
